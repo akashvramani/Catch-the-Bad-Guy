@@ -14,15 +14,9 @@ def home_screen():
     pygame.display.set_caption("Home Screen")
 
     play_button_image = pygame.image.load("play_button.png")
-    play_button_image = pygame.transform.scale(play_button_image, (150, 150))  # Make the button a square
+    play_button_image = pygame.transform.scale(play_button_image, (150, 150)) 
     play_button_rect = play_button_image.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
 
-    # Remove back button code
-    # back_button_image = pygame.image.load("back_button.png")
-    # back_button_image = pygame.transform.scale(back_button_image, (100, 50))  # Smaller size
-    # back_button_rect = back_button_image.get_rect(topleft=(10, 10))  # Top left position
-
-    # Read the high score from the file
     if os.path.exists("highscore.txt"):
         with open("highscore.txt", "r") as file:
             highscore = int(file.read())
@@ -100,9 +94,13 @@ def main():
     enemy_image = pygame.image.load("square_enemy.png")
     enemy_image = pygame.transform.scale(enemy_image, (70, 70))
     play_button_image = pygame.image.load("play_button.png")
-    play_button_image = pygame.transform.scale(play_button_image, (150, 150))  # Make the button a square
+    play_button_image = pygame.transform.scale(play_button_image, (150, 150))
     back_button_image = pygame.image.load("back_button.png")
-    back_button_image = pygame.transform.scale(back_button_image, (100, 50))  # Smaller size
+    back_button_image = pygame.transform.scale(back_button_image, (100, 50))  
+    speed_power_up_image = pygame.image.load("speed_power_up.png")
+    speed_power_up_image = pygame.transform.scale(speed_power_up_image, (50, 50))
+    score_power_up_image = pygame.image.load("+1_score.png")
+    score_power_up_image = pygame.transform.scale(score_power_up_image, (50, 50))
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     screen.blit(player_image, (300, 250))
     screen.blit(enemy_image, (400, 250))
@@ -111,8 +109,12 @@ def main():
         return pygame.Rect(x, y, width, height)
     def create_enemy_rect(x, y, width, height):
         return pygame.Rect(x, y, width, height)
+    def create_power_up_rect(x, y, width, height):
+        return pygame.Rect(x, y, width, height)
     player = create_player_rect(300, 250, 50, 50)
     enemy = create_enemy_rect(400, 250, 50, 50)
+    speed_power_up = create_power_up_rect(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT - 50), 50, 50)
+    score_power_up = create_power_up_rect(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT - 50), 50, 50)
     score = 0
 
     run = True
@@ -120,6 +122,9 @@ def main():
     start_time = time.time()
     game_duration = 20
     elapsed_time = time.time() - start_time
+    speed_power_up_spawn_time = time.time()
+    score_power_up_spawn_time = time.time()
+    score_power_up_active = True
 
     clock = pygame.time.Clock()  
     movement_speed = 12
@@ -136,6 +141,23 @@ def main():
         screen.blit(player_image, player.topleft)
         screen.blit(enemy_image, enemy.topleft)
 
+        # Spawn speed power-up every 6 seconds
+        if time.time() - speed_power_up_spawn_time >= 6:
+            speed_power_up.x = random.randint(50, SCREEN_WIDTH - 50)
+            speed_power_up.y = random.randint(50, SCREEN_HEIGHT - 50)
+            speed_power_up_spawn_time = time.time()
+
+        # Spawn score power-up every 10 seconds
+        if time.time() - score_power_up_spawn_time >= 10 and not score_power_up_active:
+            score_power_up.x = random.randint(50, SCREEN_WIDTH - 50)
+            score_power_up.y = random.randint(50, SCREEN_HEIGHT - 50)
+            score_power_up_spawn_time = time.time()
+            score_power_up_active = True
+
+        screen.blit(speed_power_up_image, speed_power_up.topleft)
+        if score_power_up_active:
+            screen.blit(score_power_up_image, score_power_up.topleft)
+
         key = pygame.key.get_pressed()
         if key[pygame.K_a] or key[pygame.K_LEFT]:
             player.move_ip(-movement_speed, 0)
@@ -149,10 +171,29 @@ def main():
         elif key[pygame.K_s] or key[pygame.K_DOWN]:
             player.move_ip(0, movement_speed)
             player_image = player_down
+
+        # Ensure player stays within screen boundaries
+        if player.left < 0:
+            player.left = 0
+        if player.right > SCREEN_WIDTH:
+            player.right = SCREEN_WIDTH
+        if player.top < 0:
+            player.top = 0
+        if player.bottom > SCREEN_HEIGHT:
+            player.bottom = SCREEN_HEIGHT
+
         if player.colliderect(enemy):
             enemy.x = random.randint(50, SCREEN_WIDTH - 50)
             enemy.y = random.randint(50, SCREEN_HEIGHT - 50)
             score += 1
+            scoreSound.play()
+        if player.colliderect(speed_power_up):
+            movement_speed += 5
+            speed_power_up.x = random.randint(50, SCREEN_WIDTH - 50)
+            speed_power_up.y = random.randint(50, SCREEN_HEIGHT - 50)
+        if player.colliderect(score_power_up) and score_power_up_active:
+            score += 1
+            score_power_up_active = False
             scoreSound.play()
 
         for event in pygame.event.get():
